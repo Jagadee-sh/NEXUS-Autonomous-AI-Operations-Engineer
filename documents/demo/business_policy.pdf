@@ -1,0 +1,40 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 520 >>
+stream
+BT /F1 11 Tf 50 780 Td 14 TL
+(NEXUS Industries ? Business Policy Manual) Tj
+T* () Tj
+T* (Travel Policy: All travel above $2,000 requires VP approval.) Tj
+T* (Expense Policy: Monthly cloud spend variance above 15% must be reviewed by FinOps.) Tj
+T* (Support SLA: Critical tickets require first response within 4 business hours.) Tj
+T* (Churn Review: Any segment with monthly churn above 10% triggers a customer success review.) Tj
+T* (Procurement: Professional services engagements above $50,000 need CFO sign-off.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000812 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+882
+%%EOF

@@ -1,0 +1,9 @@
+NEXUS Onboarding Playbook
+
+Stage 1: Kickoff within 3 business days of signup.
+Stage 2: Data connection within 10 business days.
+Stage 3: First value milestone within 30 days.
+
+Q3 retrospective note: the new billing engine caused invoice confusion for SMB customers.
+Support response times degraded during the cloud migration, increasing first-response hours.
+Customer Success recommends dedicated onboarding concierge for SMB during major releases.
