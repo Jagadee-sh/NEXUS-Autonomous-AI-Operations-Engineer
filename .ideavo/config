@@ -1,0 +1,85 @@
+{
+  "systemSetup": [
+    {
+      "name": "Install Python",
+      "command": "curl -fsSL https://pyenv.run | bash"
+    },
+    {
+      "name": "Install Docker",
+      "command": "curl -fsSL https://get.docker.com | sh"
+    }
+  ],
+  "templateName": "custom",
+  "projectDependencies": [
+    {
+      "name": "Install Backend Dependencies",
+      "command": "cd backend && python3 -m pip install -e \".[dev]\""
+    },
+    {
+      "name": "Install Frontend Dependencies",
+      "command": "cd frontend && npm ci"
+    }
+  ],
+  "codeChecks": [
+    {
+      "name": "Run Backend Tests",
+      "command": "cd backend && python3 -m pytest -q"
+    },
+    {
+      "name": "Lint Backend",
+      "command": "cd backend && ruff check nexus tests"
+    },
+    {
+      "name": "Test Frontend",
+      "command": "cd frontend && npm test"
+    },
+    {
+      "name": "Lint Frontend",
+      "command": "cd frontend && npm run lint"
+    }
+  ],
+  "buildSteps": [
+    {
+      "name": "Build Frontend",
+      "command": "cd frontend && npm run build"
+    }
+  ],
+  "runStep": [
+    {
+      "name": "Run Backend Server",
+      "command": "cd backend && python3 -m uvicorn nexus.main:app --host 0.0.0.0 --port 8000",
+      "port": "8000"
+    },
+    {
+      "name": "Run Frontend Server",
+      "command": "cd frontend && npm run dev -- --host 0.0.0.0 --port 4000",
+      "port": "4000"
+    }
+  ],
+  "deploySteps": [
+    {
+      "name": "Deploy With Docker Compose",
+      "command": "docker compose up --build"
+    }
+  ],
+  "cleanupFiles": [
+    "backend/.venv",
+    "backend/nexus_storage",
+    "frontend/dist",
+    "frontend/node_modules",
+    "__pycache__",
+    ".pytest_cache",
+    ".ruff_cache"
+  ],
+  "packageManager": "npm",
+  "envPaths": [
+    {
+      "name": "root",
+      "path": ".env"
+    },
+    {
+      "name": "backend",
+      "path": "backend/.env"
+    }
+  ]
+}

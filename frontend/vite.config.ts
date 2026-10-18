@@ -11,6 +11,8 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    host: true,
+    allowedHosts: ['e2b.app'],
     proxy: {
       '/api': { target: process.env.VITE_PROXY_TARGET || 'http://localhost:8000', changeOrigin: true },
       '/health': { target: process.env.VITE_PROXY_TARGET || 'http://localhost:8000', changeOrigin: true },
