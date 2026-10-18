@@ -21,11 +21,13 @@ from nexus.database.models import (
     DataSource,
     Document,
     Evidence,
+    ExecutionEvent,
     Task,
     TaskStep,
     ValidationResult,
 )
 from nexus.logging_config import get_logger
+from nexus.observability.tracing import redact_trace_payload
 from nexus.orchestration.state import WorkflowState
 from nexus.self_correction.classifier import build_correction_note, classify_failures
 
@@ -33,10 +35,35 @@ log = get_logger("nexus.orchestration")
 
 
 class TraceRecorder:
-    def __init__(self, session: AsyncSession, task_id: str):
+    def __init__(self, session: AsyncSession, task_id: str, trace_id: str):
         self.session = session
         self.task_id = task_id
+        self.trace_id = trace_id
         self.seq = 0
+
+    async def event(
+        self,
+        event_type: str,
+        component: str,
+        *,
+        payload: dict | None = None,
+        status: str = "success",
+        latency_ms: int = 0,
+    ) -> None:
+        self.seq += 1
+        self.session.add(
+            ExecutionEvent(
+                task_id=self.task_id,
+                trace_id=self.trace_id,
+                sequence=self.seq,
+                event_type=event_type,
+                component=component,
+                status=status,
+                payload=redact_trace_payload(payload),
+                latency_ms=latency_ms,
+            )
+        )
+        await self.session.commit()
 
     async def step(
         self,
@@ -64,6 +91,13 @@ class TraceRecorder:
             )
         )
         await self.session.commit()
+        await self.event(
+            "agent_step",
+            agent,
+            payload={"step_type": step_type, "input": input or {}, "output": output or {}, "error": error},
+            status=status,
+            latency_ms=latency_ms,
+        )
 
 
 async def _timed(fn: Callable[[], Awaitable[Any]]) -> tuple[Any, int]:
@@ -121,7 +155,8 @@ async def run_workflow(session: AsyncSession, task_id: str) -> Task:
     ctx = task.context or {}
     if isinstance(ctx.get("failure_injection"), dict):
         state.metadata["failure_injection"] = dict(ctx["failure_injection"])
-    trace = TraceRecorder(session, task.id)
+    trace = TraceRecorder(session, task.id, task.trace_id)
+    await trace.event("workflow_started", "orchestrator", payload={"request": task.request[:500]})
 
     exec_row = AgentExecution(task_id=task.id, agent="orchestrator", iteration=0, status="running")
     session.add(exec_row)
@@ -155,6 +190,7 @@ async def run_workflow(session: AsyncSession, task_id: str) -> Task:
         exec_row.status = "success"
         exec_row.finished_at = utcnow()
         await session.commit()
+        await trace.event("workflow_finished", "orchestrator", payload={"status": task.status})
     except Exception as exc:  # noqa: BLE001
         log.exception("workflow failed for task %s", task.id)
         task.status = "failed"
@@ -163,6 +199,7 @@ async def run_workflow(session: AsyncSession, task_id: str) -> Task:
         exec_row.status = "failed"
         exec_row.finished_at = utcnow()
         await session.commit()
+        await trace.event("workflow_finished", "orchestrator", payload={"status": task.status, "error": str(exc)[:500]}, status="failed")
     finally:
         state.metadata.pop("session", None)
     await session.refresh(task)

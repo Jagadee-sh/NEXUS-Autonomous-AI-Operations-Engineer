@@ -39,6 +39,15 @@ export type Trace = {
   corrections: { failure_category: string; strategy: string; description: string; succeeded: boolean }[]
   evidence: { claim: string; source_ref: string; excerpt: string; strength: number }[]
   tool_calls: { tool: string; agent: string; status: string; latency_ms: number; risk_level: string }[]
+  execution_events?: {
+    sequence: number
+    event_type: string
+    component: string
+    status: string
+    payload: Record<string, unknown>
+    latency_ms: number
+    created_at?: string | null
+  }[]
 }
 
 export type Document = {

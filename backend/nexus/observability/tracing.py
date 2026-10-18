@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from nexus.database.models import AuditLog
+from nexus.database.models import AuditLog, ExecutionEvent
 
 
 def new_trace_id() -> str:
@@ -74,6 +75,17 @@ async def build_trace(session: AsyncSession, task) -> dict[str, Any]:
     )
     retrievals = (
         (await session.execute(select(RetrievalResult).where(RetrievalResult.task_id == task.id)))
+        .scalars()
+        .all()
+    )
+    events = (
+        (
+            await session.execute(
+                select(ExecutionEvent)
+                .where(ExecutionEvent.task_id == task.id)
+                .order_by(ExecutionEvent.sequence)
+            )
+        )
         .scalars()
         .all()
     )
@@ -147,6 +159,18 @@ async def build_trace(session: AsyncSession, task) -> dict[str, Any]:
             }
             for r in retrievals[:50]
         ],
+        "execution_events": [
+            {
+                "sequence": event.sequence,
+                "event_type": event.event_type,
+                "component": event.component,
+                "status": event.status,
+                "payload": event.payload,
+                "latency_ms": event.latency_ms,
+                "created_at": event.created_at.isoformat() if event.created_at else None,
+            }
+            for event in events
+        ],
     }
 
 
@@ -159,3 +183,28 @@ def _truncate_output(output: dict[str, Any] | None) -> dict[str, Any]:
     if len(text) <= 4000:
         return output
     return {"truncated": True, "preview": text[:4000]}
+
+
+def redact_trace_payload(payload: dict[str, Any] | None, *, limit: int = 4000) -> dict[str, Any]:
+    """Remove common secrets and bound event payload size before persistence."""
+    if not payload:
+        return {}
+    secret_names = ("api_key", "secret", "password", "token", "authorization", "connection_url")
+
+    def clean(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                str(key): "[REDACTED]" if any(name in str(key).lower() for name in secret_names) else clean(item)
+                for key, item in value.items()
+            }
+        if isinstance(value, list):
+            return [clean(item) for item in value[:50]]
+        if isinstance(value, str):
+            return value[:2000]
+        return value
+
+    cleaned = clean(payload)
+    encoded = json.dumps(cleaned, default=str)
+    if len(encoded) <= limit:
+        return cleaned
+    return {"truncated": True, "preview": encoded[:limit]}

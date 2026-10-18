@@ -144,6 +144,23 @@ class TaskStep(Base, UUIDPkMixin, TimestampMixin):
     task: Mapped[Task] = relationship(back_populates="steps")
 
 
+class ExecutionEvent(Base, UUIDPkMixin, TimestampMixin):
+    """Bounded, redacted event stream for operational and Omega analysis."""
+
+    __tablename__ = "execution_events"
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), index=True)
+    trace_id: Mapped[str] = mapped_column(String(36), index=True)
+    sequence: Mapped[int] = mapped_column(Integer, default=0)
+    event_type: Mapped[str] = mapped_column(String(60), nullable=False)
+    component: Mapped[str] = mapped_column(String(100), default="")
+    status: Mapped[str] = mapped_column(String(30), default="success")
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    latency_ms: Mapped[int] = mapped_column(Integer, default=0)
+
+
+Index("ix_execution_events_trace_sequence", ExecutionEvent.trace_id, ExecutionEvent.sequence)
+
+
 class AgentExecution(Base, UUIDPkMixin, TimestampMixin):
     __tablename__ = "agent_executions"
     task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), index=True)
